@@ -13,4 +13,5 @@ dependencies = [
     "pydantic>=2.12.5",
     "pyjwt>=2.10.1",
     "pymongo>=4.16.0",
+    "uvicorn>=0.40.0",
 ]

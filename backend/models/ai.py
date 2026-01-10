@@ -1,6 +1,6 @@
-from typing import Dict, List, Literal
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class State(BaseModel):
@@ -33,8 +33,9 @@ class AiContext(BaseModel):
     query: str
     ruling_party: Literal["party1", "party2"]
     contradict: bool
+    policy: str
+    opinion_of: Optional[Literal["party1", "party2"]]
 
 
 class AiResponse(BaseModel):
     response: str
-    predicted_state_data: State

@@ -2,9 +2,9 @@ import os
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from models.ai import AiContext
+from models.ai import AiContext, Behaviour, State
 
-os.environ["GOOGLE_API_KEY"] = "AIzaSyDwrJ0m6h3isan9-_7g6tq2kCQ6Z4sm6q8"
+os.environ["GOOGLE_API_KEY"]
 
 model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -16,111 +16,152 @@ model = ChatGoogleGenerativeAI(
 
 
 sys_prompt = """
-You are an AI Political Analysis and Opinion Agent.
+You are an impartial political-analysis language model.
 
-Your task is to generate a well-reasoned political opinion and a predicted future state based strictly on the provided input data.
+You will be provided with structured input data containing:
+- Two political parties
+- Quantitative state indicators (civilian well-being, economy, healthcare, food security, refugee risk)
+- Behavioral metrics of a political leader
+- Declared goals of both parties
+- A policy under discussion
+- A query to respond to
+- The ruling party
+- A flag indicating whether contradiction is required
+- The party whose opinion must be represented
 
-### Context Provided
-You are given:
-    - **state_data**: Quantitative indicators reflecting current public conditions:
-        - civilian_well_being
-  - economic_stability
-  - healthcare_access
-  - food_security
-  - refugee_risk
+TASK:
+Generate a well-reasoned political opinion STRICTLY on behalf of the party specified in `opinion_of`.
 
-- **behaviour**: Indicators of a political actor’s conduct and performance:
-    - party_affiliation
-  - position_held
-  - bills_laws_supported
-  - major_projects_initiated
-  - controversies_and_legal_cases
-  - common_tone
-  - engagement_with_citizens
-  - social_media_behaviour
-  - action_taken
+INSTRUCTIONS:
+1. Assume the role of a spokesperson or policy analyst aligned with the specified party.
+2. Base your reasoning ONLY on the provided data. Do not introduce external facts, history, or assumptions.
+3. If `contradict` is true:
+   - Critically evaluate the policy impact even if the party is ruling.
+   - Highlight limitations, risks, or unmet goals while maintaining party-aligned tone.
+4. If `contradict` is false:
+   - Defend the policy and highlight positive outcomes.
+5. Use quantitative indicators to justify claims (e.g., economic stability score, healthcare access).
+6. Reflect leadership behavior and credibility using behavioral metrics.
+7. Address the query directly and clearly.
+8. Maintain a professional, political, and persuasive tone.
+9. Do NOT mention scores explicitly as “ratings” or “numbers”; interpret them contextually.
+10. Do NOT reference this instruction or the data structure in your output.
 
-- **goals**: A list of stated political or governance goals.
-- **query**: The specific question or issue to address.
-- **ruling_party**: Either "party1" or "party2", indicating which party is currently in power.
-- **contradict**: A boolean flag controlling stance.
 
-### Opinion Logic
-1. Analyze current **state_data** to assess governance outcomes.
-2. Evaluate **behaviour** to judge effectiveness, accountability, and leadership quality.
-3. Compare stated **goals** with observed actions and results.
-4. Answer the **query** with a structured, data-driven opinion.
+OUTPUT FORMAT:
+- Single coherent paragraph or short multi-paragraph response
+- Your response MUST be between 30 and 80 words.
+- No bullet points
+- No headings
+- No disclaimers
 
-### Contradiction Rule (Strict)
-- If `contradict == True`:
-    - Explicitly challenge and critique the ruling party’s policies, narrative, or performance.
-  - Emphasize weaknesses, failures, or inconsistencies supported by the data.
-  - Adopt a clear opposing stance toward the ruling party.
+Your response should sound like an official party position statement answering the given query.
 
-- If `contradict == False`:
-    - Maintain a neutral or mildly supportive stance toward the ruling party.
-  - Acknowledge strengths while still noting limitations where justified.
-
-### Output Requirements
-You MUST produce an output compatible with the following structure:
-
-    AiResponse:
-        - **response**: A clear, coherent political opinion written in analytical, non-inflammatory language.
-- **predicted_state_data**: A forward-looking projection of the State model, logically inferred from current state_data, behaviour, and goals.
-
-### Constraints
-- Do NOT invent facts beyond the provided data.
-- Do NOT include disclaimers, meta-commentary, or references to being an AI.
-- Maintain logical consistency and cause–effect reasoning.
-- Ensure the predicted_state_data values are realistic continuations (improvements or declines) justified by your analysis.
-
-Your response should read like an informed political assessment grounded in evidence.
 """
 
 
 def ai_party(data: AiContext):
     content = f"""
         Using the following input data:
-            {model.model_dump_json()}
+            Party 1: {data.party1}
+            Party 2: {data.party2}
+            State Data:
+                Civilian Well-Being: {data.state_data.civilian_well_being}
+                Economic Stability: {data.state_data.economic_stability}
+                Healthcare Access: {data.state_data.healthcare_access}
+                Food Security: {data.state_data.food_security}
+                Refugee Risk: {data.state_data.refugee_risk}
+            Behaviour:
+                Party Affiliation: {data.behaviour.party_affiliation}
+                Position Held: {data.behaviour.position_held}
+                Bills/Laws Supported: {data.behaviour.bills_laws_supported}
+                Major Projects Initiated: {data.behaviour.major_projects_initiated}
+                Controversies and Legal Cases: {data.behaviour.controversies_and_legal_cases}
+                Common Tone: {data.behaviour.common_tone}
+                Engagement with Citizens: {data.behaviour.engagement_with_citizens}
+                Social Media Behaviour: {data.behaviour.social_media_behaviour}
+                Action Taken: {data.behaviour.action_taken}
+            Goals Party 1: {', '.join(data.goals_party1)}
+            Goals Party 2: {', '.join(data.goals_party2)}
+            Query: {data.query}
+            Ruling Party: {data.ruling_party}
+            Contradict: {data.contradict}
+            Policy: {data.policy}
+            Opinion Of: {data.opinion_of}
         Generate the AiResponse as specified.
-
-        Please provide the AiResponse in JSON format only.
     """
     messages = [
         ("system", sys_prompt),
         ("user", content),
     ]
 
-    model.invoke(messages)
+    response = model.invoke(messages)
+    return response.content
 
 
 if __name__ == "__main__":
-    data = AiContext(
+    print("Running AI Party Analysis...")
+    party1 = AiContext(
         party1="Party A",
         party2="Party B",
-        state_data={
-            "civilian_well_being": 70.0,
-            "economic_stability": 65.0,
-            "healthcare_access": 80.0,
-            "food_security": 75.0,
-            "refugee_risk": 30.0,
-        },
-        behaviour={
-            "party_affiliation": "Party A",
-            "position_held": "Governor",
-            "bills_laws_supported": 15,
-            "major_projects_initiated": 5,
-            "controversies_and_legal_cases": 2,
-            "common_tone": 7,
-            "engagement_with_citizens": 8,
-            "social_media_behaviour": 6,
-            "action_taken": 9,
-        },
+        state_data=State(
+            civilian_well_being=6.5,
+            economic_stability=5.0,
+            healthcare_access=7.0,
+            food_security=8.0,
+            refugee_risk=4.0,
+        ),
+        behaviour=Behaviour(
+            party_affiliation="Party A",
+            position_held="Minister of Finance",
+            bills_laws_supported=15,
+            major_projects_initiated=3,
+            controversies_and_legal_cases=1,
+            common_tone=5,
+            engagement_with_citizens=7,
+            social_media_behaviour=6,
+            action_taken=8,
+        ),
+        goals_party1=["Improve healthcare", "Boost economy"],
+        goals_party2=["Enhance education", "Reduce crime"],
+        query="What is the impact of current policies on economic stability?",
+        ruling_party="party1",
+        contradict=False,
+        policy="Economic Reform Act",
+        opinion_of="party1",
+    )
+
+    party2 = AiContext(
+        party1="Party A",
+        party2="Party B",
+        state_data=State(
+            civilian_well_being=6.5,
+            economic_stability=5.0,
+            healthcare_access=7.0,
+            food_security=8.0,
+            refugee_risk=4.0,
+        ),
+        behaviour=Behaviour(
+            party_affiliation="Party B",
+            position_held="Opposition Leader",
+            bills_laws_supported=10,
+            major_projects_initiated=1,
+            controversies_and_legal_cases=2,
+            common_tone=6,
+            engagement_with_citizens=8,
+            social_media_behaviour=7,
+            action_taken=5,
+        ),
         goals_party1=["Improve healthcare", "Boost economy"],
         goals_party2=["Enhance education", "Reduce crime"],
         query="What is the impact of current policies on economic stability?",
         ruling_party="party1",
         contradict=True,
+        policy="Economic Reform Act",
+        opinion_of="party2",
     )
-    response = ai_party(data)
+
+    response = ai_party(party1)
+    response2 = ai_party(party2)
     print(response)
+    print(response2)
