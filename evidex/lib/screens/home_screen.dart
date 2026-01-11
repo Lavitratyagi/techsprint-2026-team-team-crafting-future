@@ -16,7 +16,7 @@ class _HomePageState extends State<HomePage> {
   bool isCardView = true;
   bool loading = true;
 
-  String selectedCategory = "Trending";
+  String selectedCategory = "all";
   List<NewsModel> newsList = [];
 
   @override
